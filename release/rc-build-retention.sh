@@ -32,7 +32,7 @@ fi
 
 CURRENT_DIR=$(pwd)
 LB_MOUNT=/latestbuilds
-LATESTBUILDS=${LB_MOUNT}/latestbuilds/${PRODUCT}/${RELEASE}/${BLD_NUM}
+LATESTBUILDS=${LB_MOUNT}/${PRODUCT}/${RELEASE}/${BLD_NUM}
 GIT_DIR='rc-build-retention'
 
 if [ ! -e ${LATESTBUILDS} ]; then
