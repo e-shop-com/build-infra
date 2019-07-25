@@ -73,7 +73,7 @@ add_git_file() {
 	touch ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}/${BLD_NUM}
 	git add ${PRODUCT}/${RELEASE}/${BLD_NUM}
 	git commit --allow-empty -m "retain RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
-	git push origin master
+	git push origin master:refs/heads/master
 	popd
 }
 
@@ -82,7 +82,7 @@ remove_git_file() {
 	pushd ${CURRENT_DIR}/${GIT_DIR}/
 	git rm ${PRODUCT}/${RELEASE}/${BLD_NUM}
 	git commit --allow-empty -m "remove RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
-	git push origin master
+	git push origin master:refs/heads/master
 	popd
 }
 
