@@ -71,7 +71,7 @@ add_git_file() {
     mkdir -p ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}
     touch ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}/${BLD_NUM}
     git add --all
-    git commit -m "retain RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
+    git diff-index --quiet HEAD || git commit -m "retain RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
     git push origin master:refs/heads/master
     popd
 }
@@ -80,7 +80,7 @@ add_git_file() {
 remove_git_file() {
     pushd ${CURRENT_DIR}/${GIT_DIR}/
     git rm ${PRODUCT}/${RELEASE}/${BLD_NUM}
-    git commit -m "remove RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
+    git diff-index --quiet HEAD || git commit -m "remove RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
     git push origin master:refs/heads/master
     popd
 }
