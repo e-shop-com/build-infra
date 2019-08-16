@@ -2,7 +2,7 @@
 # Program to retain release candidate build a bit longer or expire them on NAS
 
 usage() {
-	echo
+    echo
     echo "$0 -p <product> -r <release> -b <bld_num> -k <true|false>"
     echo
     echo "  -p: product name; couchbase-server"
@@ -13,7 +13,7 @@ usage() {
 
 while getopts "p:r:b:k:" opt; do
     case $opt in
-    	p) PRODUCT=$OPTARG;;
+        p) PRODUCT=$OPTARG;;
         r) RELEASE=$OPTARG;;
         b) BLD_NUM=$OPTARG;;
         k) KEEP_BUILD=$OPTARG;;
@@ -26,8 +26,8 @@ while getopts "p:r:b:k:" opt; do
 done
 
 if [ ! "${PRODUCT}" ] || [ ! "${RELEASE}" ] || [ ! "${BLD_NUM}" ] || [ ! "${KEEP_BUILD}" ]; then
-	usage
-	exit 1
+    usage
+    exit 1
 fi
 
 CURRENT_DIR=$(pwd)
@@ -47,53 +47,54 @@ popd
 
 # Modify to current timestamp
 mark_file_current() {
-	pushd ${LATESTBUILDS}
-	for f in ${files}
-	do
-		touch -a -m "${f}"
-	done
-	popd
+    pushd ${LATESTBUILDS}
+    for f in ${files}
+    do
+        touch -a -m "${f}"
+    done
+    popd
 }
 
 # Modify to expired timestamp: "Unix epoch is 1970-01-01T00:00:00Z"
 mark_file_outdated() {
-	pushd ${LATESTBUILDS}
-	for f in ${files}
-	do
-		#touch -a -m -d '-15 day' "${f}"
-		touch -a -m -t '197001010000' "${f}"
-	done
-	popd
+    pushd ${LATESTBUILDS}
+    for f in ${files}
+    do
+        touch -a -m -d '-15 day' "${f}"
+    done
+    popd
 }
 
 # Add bld_num to git repo
 add_git_file() {
-	pushd ${CURRENT_DIR}/${GIT_DIR}/
-	mkdir -p ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}
-	touch ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}/${BLD_NUM}
-	git add ${PRODUCT}/${RELEASE}/${BLD_NUM}
-	git commit --allow-empty -m "retain RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
-	git push origin master:refs/heads/master
-	popd
+    pushd ${CURRENT_DIR}/${GIT_DIR}/
+    mkdir -p ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}
+    touch ${CURRENT_DIR}/${GIT_DIR}/${PRODUCT}/${RELEASE}/${BLD_NUM}
+    git add --all
+    git commit -m "retain RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
+    git push origin master:refs/heads/master
+    popd
 }
 
 # Remove bld_num to git repo
 remove_git_file() {
-	pushd ${CURRENT_DIR}/${GIT_DIR}/
-	git rm ${PRODUCT}/${RELEASE}/${BLD_NUM}
-	git commit --allow-empty -m "remove RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
-	git push origin master:refs/heads/master
-	popd
+    pushd ${CURRENT_DIR}/${GIT_DIR}/
+    git rm ${PRODUCT}/${RELEASE}/${BLD_NUM}
+    git commit -m "remove RC build - ${PRODUCT}/${RELEASE}/${BLD_NUM}"
+    git push origin master:refs/heads/master
+    popd
 }
 
 if [[ ${KEEP_BUILD} == 'true' ]]; then
-	mark_file_current
-	add_git_file
+    mark_file_current
+    if [[ ${DAILY_RUN} == 'false' ]];then
+        add_git_file
+    fi
 elif [[ ${KEEP_BUILD} == 'false' ]]; then
-	mark_file_outdated
-	remove_git_file
+    mark_file_outdated
+    remove_git_file
 else
-	echo "KEEP_BUILD is set to an unknown value \"${KEEP_BUILD}\"!"
-	echo "Nothing to do!"
-	exit 0
+    echo "KEEP_BUILD is set to an unknown value \"${KEEP_BUILD}\"!"
+    echo "Nothing to do!"
+    exit 0
 fi
