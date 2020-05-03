@@ -3,6 +3,9 @@
 
   tasks:
 
+    - name: Disable Windows antivirus during setup
+      win_shell: Add-MpPreference -ExclusionPath "C:"
+
     # Needed for WiX Toolset
     - name: "Enable .NET Framework 3.5"
       win_feature:
@@ -14,19 +17,19 @@
     - name: "Install Python 3"
       win_chocolatey:
         name: python3
-        version: 3.6.6
+        version: 3.7.7
       tags: python3
 
     - name: "Provide python3 alias"
-      win_shell: copy C:\Python36\python.exe C:\Python36\python3.exe
+      win_shell: copy C:\Python37\python.exe C:\Python37\python3.exe
       args:
-        creates: C:\Python36\python3.exe
+        creates: C:\Python37\python3.exe
       tags: python3
 
-    - name: "Provide python3.6 alias"
-      win_shell: copy C:\Python36\python.exe C:\Python36\python3.6.exe
+    - name: "Provide python3.7 alias"
+      win_shell: copy C:\Python37\python.exe C:\Python37\python3.7.exe
       args:
-        creates: C:\Python36\python3.6.exe
+        creates: C:\Python37\python3.7.exe
       tags: python3
 
     - name: "Install Python 2"
@@ -39,30 +42,36 @@
         name: "{{ item }}"
         allow_empty_checksums: "yes"
       with_items:
-        - kb2919355
-        - kb2999226
-        - kb2919442
         - git
         - cmake
         - curl
         - nasm
         - ninja
         - MinGW
-        - vcpython27
         - ruby
         - wixtoolset
         - 7zip.commandline
-        - jdk8
-        - maven
-        - activeperl
         - googlechrome
         - insted
         - pandoc
         - vscode
 
+    - name: Install JDK for Jenkins
+      win_chocolatey:
+        name: openjdk
+        version: 11.0.2.01
+
     - name: "Install python paramiko module"
       win_command: C:\Python27\Scripts\pip.exe install paramiko
       tags: python2
+
+    - name: "Install python3 modules for testrunner"
+      win_command: >-
+        C:\Python37\Scripts\pip.exe install sgmllib3k==1.0.0 paramiko==2.7.1 httplib2==0.17.1 pyyaml==5.3.1
+        beautifulsoup4==4.8.2 Geohash==1.0 python-geohash==0.8.5 deepdiff==4.3.2
+        pyes==0.99.6 pytz==2019.3 requests==2.23.0 jsonpickle==1.3
+        docker==4.2.0 decorator==4.4.2
+      tags: python3
 
     - name: Create download area for Ansible
       win_file:
@@ -70,34 +79,6 @@
         state: directory
       tags:
         - setup
-
-    - name: "Download py2exe"
-      win_get_url:
-        url: https://iweb.dl.sourceforge.net/project/py2exe/py2exe/0.6.9/py2exe-0.6.9.win64-py2.7.amd64.exe
-        dest: 'C:\py2exe.exe'
-
-    - name: "Install py2exe"
-      raw: 'easy_install C:\py2exe.exe'
-      ignore_errors: yes
-
-    - name: Download Cygwin setup program
-      win_get_url:
-        url: https://cygwin.com/setup-x86_64.exe
-        dest: C:\ansible_files\cygwin_setup.exe
-      tags:
-        - cygwin
-
-    - name: Copy Cygwin install batch script
-      win_copy:
-        src: install_cygwin.bat
-        dest: C:\ansible_files\install_cygwin.bat
-      tags:
-        - cygwin
-
-    - name: Install Cygwin
-      win_command: C:\ansible_files\install_cygwin.bat
-      tags:
-        - cygwin
 
     - name: Create required "C:\\Program Files (x86)\\Common Files\\Merge Modules" directory
       win_file:
@@ -110,10 +91,14 @@
           dest: "C:\\Program Files (x86)\\Common Files\\Merge Modules\\{{ item.filename }}"
           force: no
       with_items:
-        - url: http://172.23.120.24/builds/latestbuilds/winbits/Microsoft_VC100_CRT_x64.msm
+        - url: http://downloads.build.couchbase.com/winbits/Microsoft_VC100_CRT_x64.msm
           filename: Microsoft_VC100_CRT_x64.msm
-        - url: http://172.23.120.24/builds/latestbuilds/winbits/Microsoft_VC120_CRT_x64.msm
+        - url: http://downloads.build.couchbase.com/winbits/Microsoft_VC120_CRT_x64.msm
           filename: Microsoft_VC120_CRT_x64.msm
+        - url: http://downloads.build.couchbase.com/winbits/Microsoft_VC140_CRT_x64.msm
+          filename: Microsoft_VC140_CRT_x64.msm
+      tags:
+        - mergemodules
 
     - name: Create bin directory
       win_file:
@@ -224,7 +209,17 @@
         direction: in
         protocol: TCP
 
-    - include: msvc2017.yml
+    - name: Restore basic Windows antivirus
+      win_shell: Remove-MpPreference -ExclusionPath "C:"
+
+    - name: Exclude Jenkins from windows antivirus
+      win_shell: Add-MpPreference -ExclusionPath "C:\Jenkins"
+
+    - name: install vs2017
+      include_role:
+        name: "vs2017"
+      vars:
+        PRODUCT: "couchbase-server"
 
     # Do OpenSSH last so the service has the latest version of the path
     - name: Install OpenSSH (for Jenkins)

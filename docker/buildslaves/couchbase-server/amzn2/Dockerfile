@@ -1,7 +1,7 @@
 # Docker container for Amazon 2.0
 
 FROM amazonlinux:2.0.20181010
-MAINTAINER build-team@couchbase.com
+LABEL maintainer="build-team@couchbase.com"
 
 USER root
 RUN yum -y update; yum clean all
@@ -10,7 +10,7 @@ RUN yum -y update; yum clean all
 RUN yum install -y java-1.8.0-openjdk-headless curl && \
     yum clean packages
 RUN curl \
-    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.13/swarm-client-3.13.jar \
+    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.17/swarm-client-3.17.jar \
     -o /usr/local/lib/swarm-client.jar
 
 # tini, to avoid zombie issues when running with Swarm jar
@@ -23,11 +23,11 @@ RUN chmod +x /tini
 RUN yum install --setopt=keepcache=0 -y \
                 deltarpm \
                 ed \
+                gcc \
+                gcc-c++ \
                 git \
                 glibc-devel \
                 gzip \
-                gcc \
-                gcc-c++ \
                 make \
                 man \
                 ncurses-devel \
@@ -38,6 +38,7 @@ RUN yum install --setopt=keepcache=0 -y \
                 python-devel \
                 redhat-lsb-core \
                 rpm-build \
+                rsync \
                 ruby rubygems rubygem-rake \
                 sqlite-devel \
                 sudo \
@@ -46,8 +47,8 @@ RUN yum install --setopt=keepcache=0 -y \
                 vim \
                 wget \
                 which \
-                xz && \
-    ln -s /usr/bin/python2.7 /usr/bin/python2.6
+                xz \
+    && ln -s /usr/bin/python2.7 /usr/bin/python2.6
 
 # Create couchbase user with password-less sudo privs, and give
 # ownership of /opt/couchbase
@@ -91,7 +92,7 @@ RUN mkdir /tmp/deploy && \
     rm -fr /tmp/deploy
 
 # * repo
-RUN curl https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo && \
+RUN curl https://raw.githubusercontent.com/couchbasedeps/git-repo/repo-1-couchbase/repo -o /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo
 
 # Set LANG
@@ -102,7 +103,6 @@ COPY build/swarm*.properties /
 
 # Expose SSH daemon and run our builder startup script
 EXPOSE 22
-ADD .ssh /home/couchbase/.ssh
 COPY build/couchbuilder_start.sh /usr/sbin/
 ENTRYPOINT [ "/tini", "--", "/usr/sbin/couchbuilder_start.sh" ]
 CMD [ "swarm" ]

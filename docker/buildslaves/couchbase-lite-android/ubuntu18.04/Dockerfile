@@ -63,19 +63,12 @@ RUN yes 'y' | sdkmanager --licenses >/dev/null
 # Update and install using sdkmanager
 ENV SDK_CMD $ANDROID_HOME/tools/bin/sdkmanager
 RUN $SDK_CMD "tools" "platform-tools" && \
+    $SDK_CMD "build-tools;28.0.3" && \
     $SDK_CMD "build-tools;29.0.0" && \
+    $SDK_CMD "build-tools;29.0.2" && \
     $SDK_CMD "platforms;android-29" && \
     $SDK_CMD "extras;android;m2repository" "extras;google;m2repository" && \
     $SDK_CMD "cmake;3.10.2.4988404"
-
-# Android NDK
-USER couchbase
-RUN cd /home/couchbase/jenkins/tools && \
-    curl -L https://dl.google.com/android/repository/android-ndk-r20-linux-x86_64.zip -o android-ndk-r20.zip && \
-    unzip -qq android-ndk-r20.zip && \
-    chown -R couchbase:couchbase android-ndk-r20 && \
-    chmod 755 android-ndk-r20 && \
-    rm -rf android-ndk-r20.zip
 
 # Revert so CMD will run as root.
 USER root

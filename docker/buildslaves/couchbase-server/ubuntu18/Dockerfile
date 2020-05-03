@@ -1,7 +1,7 @@
 # Docker container for Ubuntu 18.04
 
 FROM ubuntu:18.04
-MAINTAINER build-team@couchbase.com
+LABEL maintainer="build-team@couchbase.com"
 
 USER root
 
@@ -23,7 +23,7 @@ RUN apt-get update && \
     apt-get install -y openjdk-8-jre-headless && \
     apt-get clean
 RUN curl \
-    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.13/swarm-client-3.13.jar \
+    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.17/swarm-client-3.17.jar \
     -o /usr/local/lib/swarm-client.jar
 
 # tini, to avoid zombie issues when running with Swarm jar
@@ -79,7 +79,7 @@ RUN echo 'PATH="/usr/lib/ccache:$PATH"' >> /home/couchbase/.profile
 RUN mkdir /tmp/deploy && \
     curl https://cmake.org/files/v3.13/cmake-3.13.0-Linux-x86_64.sh -o /tmp/deploy/cmake.sh && \
     (echo y ; echo n) | sh /tmp/deploy/cmake.sh --prefix=/usr/local && \
-    curl https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo && \
+    curl https://raw.githubusercontent.com/couchbasedeps/git-repo/repo-1-couchbase/repo -o /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo && \
     cd /tmp && rm -rf /tmp/deploy
 
@@ -114,6 +114,12 @@ RUN apt-get update && \
     apt-get clean && \
     locale-gen en_US.UTF-8
 
+# Add rsync for pulling config+secrets at startup
+RUN set -x \
+        && apt update \
+        && apt install -y rsync \
+        && apt clean
+
 # Set LANG
 ENV LANG=en_US.UTF-8
 
@@ -125,7 +131,7 @@ COPY build/swarm*.properties /
 
 # Expose SSH daemon and run our builder startup script
 EXPOSE 22
-ADD .ssh /home/couchbase/.ssh
+
 COPY build/couchbuilder_start.sh /usr/sbin/
 ENTRYPOINT [ "/tini", "--", "/usr/sbin/couchbuilder_start.sh" ]
 CMD [ "swarm" ]

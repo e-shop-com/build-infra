@@ -74,7 +74,8 @@
     ansible_user: couchbase
     ansible_password: couchbase
     ansible_become: true
-    ansible_sudo_password: couchbase
+    ansible_become_password: couchbase
+    ansible_python_interpreter: /usr/bin/python3
 
   tasks:
 
@@ -126,6 +127,11 @@
         autoremove: yes
         purge: yes
 
+
+    - name: Get distro codename
+      shell: lsb_release -sc
+      register: distro_codename
+
     - name: Get kernel version
       shell: uname -r
       register: uname
@@ -137,7 +143,6 @@
           - apt-transport-https
           - ca-certificates
           - software-properties-common
-          - python-pip
           - curl
           - nfs-common
           - zsh
@@ -149,19 +154,13 @@
         src: "{{ item.nasserver }}:{{ item.naspath }}"
         fstype: nfs
         opts: rw,soft
-        dump: 0
-        passno: 0
+        dump: "0"
+        passno: "0"
         state: mounted
       with_items:
-        - mountpoint: /latestbuilds
-          nasserver: latestbuilds.service.couchbase.com
-          naspath: /data/builds/latestbuilds
-        - mountpoint: /releases
-          nasserver: latestbuilds.service.couchbase.com
-          naspath: /data/builds/releases
-        - mountpoint: /builds
-          nasserver: nas-n.mgt.couchbase.com
-          naspath: /data/builds
+        - mountpoint: /buildteam
+          nasserver: nas.build.couchbase.com
+          naspath: /data/buildteam
 
     - name: Add docker key
       shell: >
@@ -171,17 +170,12 @@
 
     - name: Add docker apt repository
       shell: >
-        add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
+        add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ distro_codename.stdout }} stable"
 
     - name: Install Docker
       apt:
         name: docker-ce
         update_cache: yes
-
-    - name: Install docker-py
-      pip:
-        name: docker-py
-        version: 1.9.0
 
     - name: Add couchbase user to docker group
       user:
@@ -213,3 +207,58 @@
         state: absent
         purge: yes
 
+    - name: Add apt key for netdata
+      become: true
+      apt_key:
+        url: https://packagecloud.io/netdata/netdata/gpgkey
+        state: present
+
+    - name: Add netdata apt repository
+      become: true
+      apt_repository:
+        repo: deb https://packagecloud.io/netdata/netdata/ubuntu/ {{ distro_codename.stdout }} main
+        state: present
+        filename: netdata
+
+    - name: Install netdata
+      become: true
+      apt:
+        name: netdata
+        state: latest
+        update_cache: yes
+
+    - name: Create netdata cache dir
+      become: true
+      file:
+        path: /var/cache/netdata
+        state: directory
+        mode: '0755'
+        owner: netdata
+        group: netdata
+
+    - name: Create netdata log dir
+      become: true
+      file:
+        path: /var/log/netdata
+        state: directory
+        mode: '0755'
+        owner: netdata
+        group: adm
+
+    - name: Expose netdata port
+      replace:
+        path: /etc/netdata/netdata.conf
+        regexp: 'bind to = localhost'
+        replace: '# bind to = localhost'
+
+    - name: Start netdata
+      become: true
+      service:
+        name: netdata
+        state: started
+
+    - name: Start netdata at boot
+      become: true
+      service:
+        name: "netdata"
+        enabled: yes

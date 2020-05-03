@@ -1,7 +1,7 @@
 # Docker container for Centos 7.4
 
 FROM centos:7.2.1511
-MAINTAINER build-team@couchbase.com
+LABEL maintainer="build-team@couchbase.com"
 
 USER root
 # We first add the Centos 7.2 repository from Centos Vault, so we're only
@@ -17,7 +17,7 @@ RUN yum clean all && rpm --rebuilddb && yum install -y yum-plugin-ovl deltarpm
 RUN yum install -y java-1.8.0-openjdk-headless curl && \
     yum clean packages
 RUN curl \
-    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.13/swarm-client-3.13.jar \
+    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.17/swarm-client-3.17.jar \
     -o /usr/local/lib/swarm-client.jar
 
 # tini, to avoid zombie issues when running with Swarm jar
@@ -41,6 +41,7 @@ RUN yum install --setopt=keepcache=0 -y \
                 python-devel \
                 redhat-lsb-core \
                 rpm-build \
+                rsync \
                 ruby rubygems rubygem-rake \
                 sqlite-devel \
                 sudo \
@@ -54,6 +55,9 @@ RUN sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config && \
     sed -ri 's/#UsePAM no/UsePAM no/g' /etc/ssh/sshd_config && \
     ssh-keygen -f /etc/ssh/ssh_host_rsa_key -N '' -t rsa && \
     ssh-keygen -f /etc/ssh/ssh_host_dsa_key -N '' -t dsa
+
+# clean up nsswitch
+RUN sed -ri 's/^hosts.*/hosts:      files dns/' /etc/nsswitch.conf
 
 # Create couchbase user with password-less sudo privs, and give
 # ownership of /opt/couchbase
@@ -104,7 +108,7 @@ RUN mkdir /tmp/deploy && \
     rm -fr /tmp/deploy
 
 # * repo
-RUN curl https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo && \
+RUN curl https://raw.githubusercontent.com/couchbasedeps/git-repo/repo-1-couchbase/repo -o /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo
 
 # Still need paramiko in python2 for testrunner (necessary at least for simple-test,
@@ -117,16 +121,14 @@ COPY build/swarm*.properties /
 
 # Expose SSH daemon and run our builder startup script
 EXPOSE 22
-ADD .ssh /home/couchbase/.ssh
 COPY build/couchbuilder_start.sh /usr/sbin/
 ENTRYPOINT [ "/tini", "--", "/usr/sbin/couchbuilder_start.sh" ]
 CMD [ "swarm" ]
 
 # Set LANG
 ENV LANG=en_US.UTF-8
-RUN echo "LANG=${LANG}" > /home/couchbase/.ssh/environment && \
-    chown couchbase:couchbase /home/couchbase/.ssh/environment && \
-    echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
+
+RUN echo "PermitUserEnvironment yes" >> /etc/ssh/sshd_config
 
 # Keep this stuff at the end, because the ARG declaration breaks
 # Docker build caching

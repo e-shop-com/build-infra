@@ -17,26 +17,32 @@ RUN groupadd -g1000 couchbase && \
     echo 'Defaults:%wheel !requiretty' >> /etc/sudoers.d/wheel_group && \
     chmod 440 /etc/sudoers.d/wheel_group
 
+# clean up nsswitch
+RUN sed -ri 's/^hosts.*/hosts:      files dns/' /etc/nsswitch.conf
+
 ### Install Couchbase build dependencies ######################################
 # * Packages from the base CentOS repository
 RUN yum install --setopt=keepcache=0 -y epel-release && \
     yum install --setopt=keepcache=0 -y \
-                ed \
-                glibc.i686 \
                 bzip2-devel \
-                libicu \
-                libunwind \
-                libuv-devel \
+                cmake \
+                ed \
+                git \
+                glibc.i686 \
                 libev-devel \
                 libevent-devel \
                 libffi-devel \
+                libicu \
+                libunwind \
+                libuv-devel \
                 libxml2-devel \
-                openssl-devel \
                 make \
                 man \
                 ncurses-devel \
                 numactl-devel \
-                openssh-clients openssl-devel \
+                openssl-devel \
+                openssh-clients \
+                perl-XML-XPath \
                 python-devel \
                 python-pip \
                 python-virtualenv \
@@ -45,12 +51,8 @@ RUN yum install --setopt=keepcache=0 -y epel-release && \
                 ruby rubygems rubygem-rake \
                 tar \
                 unzip \
-                which \
-                git \
-                cmake \
-                python-pip \
                 wget \
-                python-pip
+                which
 
 # Dev basic tools
 RUN yum groupinstall -y "Development Tools"
@@ -101,7 +103,7 @@ RUN mkdir /tmp/deploy && \
 
 # Temp install step for "cbdep" tool
 ARG CACHEBUST=1
-RUN curl http://nas-n.mgt.couchbase.com/builds/downloads/cbdep/cbdep.linux -o /usr/local/bin/cbdep && chmod 755 /usr/local/bin/cbdep
+RUN curl http://downloads.build.couchbase.com/cbdep/cbdep.linux -o /usr/local/bin/cbdep && chmod 755 /usr/local/bin/cbdep
 
 # Run our builder startup script
 COPY build/couchbuilder_start.sh /usr/sbin/

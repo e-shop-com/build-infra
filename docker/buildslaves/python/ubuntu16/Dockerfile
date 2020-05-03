@@ -43,12 +43,12 @@ RUN mkdir /tmp/deploy && \
     rm -rf deploy
 
 # Repo
-RUN curl https://storage.googleapis.com/git-repo-downloads/repo \
+RUN curl https://raw.githubusercontent.com/couchbasedeps/git-repo/repo-1-couchbase/repo \
     -o /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo
 
 # Jenkins Swarm client jar
-RUN curl https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.8/swarm-client-3.8.jar -o /usr/local/lib/swarm-client.jar
+RUN curl https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.17/swarm-client-3.17.jar -o /usr/local/lib/swarm-client.jar
 
 # tini, to avoid zombie issues when running with Swarm jar
 ENV TINI_VERSION v0.18.0

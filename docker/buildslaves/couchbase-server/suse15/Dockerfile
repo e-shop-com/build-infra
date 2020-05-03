@@ -1,8 +1,7 @@
 # Docker container for SUSE 15, based on openSUSE LEAP
 
 FROM opensuse/leap:15.0
-
-MAINTAINER build-team@couchbase.com
+LABEL maintainer="build-team@couchbase.com"
 
 USER root
 RUN perl -pi -e 's#download.opensuse.org#suse.mirrors.tds.net/pub/opensuse#g' /etc/zypp/repos.d/*
@@ -24,34 +23,35 @@ RUN chmod +x /tini
 # JDK for Jenkins
 RUN zypper -n install java-1_8_0-openjdk-headless && zypper clean
 RUN curl \
-    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.13/swarm-client-3.13.jar \
+    https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/3.17/swarm-client-3.17.jar \
     -o /usr/local/lib/swarm-client.jar
 
 ### Install Couchbase build dependencies ######################################
 # * Packages from the base CentOS repository
 RUN zypper -n install \
-                hostname \
                 binutils \
+                ccache \
                 curl \
                 ed \
                 gcc-c++ \
-                make \
-                ccache \
                 git \
-                man \
-                ncurses-devel \
+                hostname \
                 libffi-devel \
                 libnuma-devel \
                 libopenssl-devel \
                 lsb-release \
+                make \
+                man \
+                ncurses-devel \
                 python-devel \
                 python-xml \
                 rpm-build \
+                rsync \
                 ruby \
                 sqlite3-devel \
                 tar \
-                unzip && \
-                zypper clean
+                unzip \
+    && zypper clean
 
 # * CMake (from cmake.org)
 RUN mkdir /tmp/deploy && \
@@ -71,7 +71,7 @@ RUN ln -s /usr/bin/ccache /home/couchbase/bin/gcc && \
     ln -s /usr/bin/ccache /home/couchbase/bin/c++
 
 # * repo
-RUN curl https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo && \
+RUN curl https://raw.githubusercontent.com/couchbasedeps/git-repo/repo-1-couchbase/repo -o /usr/local/bin/repo && \
     chmod a+x /usr/local/bin/repo
 
 # Set LANG
@@ -81,7 +81,6 @@ ENV LANG=en_US.UTF-8
 COPY build/swarm*.properties /
 
 # Run our builder startup script
-ADD .ssh /home/couchbase/.ssh
 COPY build/couchbuilder_start.sh /usr/sbin/
 ENTRYPOINT [ "/tini", "--", "/usr/sbin/couchbuilder_start.sh" ]
 CMD [ "swarm" ]
